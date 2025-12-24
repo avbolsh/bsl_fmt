@@ -105,3 +105,28 @@ fn process_text(text: &str, corrections: &[(&str, &str)]) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_process_line() {
+        let corrections = vec![("если", "Если"), ("тогда", "Тогда")];
+        assert_eq!(
+            process_line("если условие тогда", &corrections),
+            "Если условие Тогда"
+        );
+    }
+    
+    #[test]
+    fn test_process_line_with_comment() {
+        let corrections = vec![("если", "Если"), ("тогда", "Тогда")];
+        assert_eq!(
+            process_line("если условие тогда // если тогда", &corrections),
+            "Если условие Тогда // если тогда"
+        );
+    }
+
+}
