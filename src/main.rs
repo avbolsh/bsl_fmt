@@ -5,9 +5,17 @@ fn main() {
 
     let mut clipboard = Clipboard::new().unwrap();
 
-    let text_before = clipboard.get_text().unwrap();
+    let text = clipboard.get_text().unwrap();
 
-    let corrections = [
+    let corrections = get_corrections();
+
+    let result = process_text(&text, &corrections);
+
+    clipboard.set_text(result).unwrap();
+}
+
+fn get_corrections() -> Vec<(&'static str, &'static str)> {
+    vec![
         ("вызватьисключение", "ВызватьИсключение"),
         ("возврат", "Возврат"),
         ("выполнить", "Выполнить"),
@@ -68,44 +76,32 @@ fn main() {
             "НаКлиентеНаСервереБезКонтекста",
         ),
         ("наклиентенасервере", "НаКлиентеНаСервере"),
-    ];
+    ]
+}
 
-    // Разбиваем текст на строки, обрабатываем каждую строку отдельно
-    let lines: Vec<&str> = text_before.lines().collect();
-    let mut processed_lines = Vec::with_capacity(lines.len());
-
-    for line in lines {
-        // Находим позицию комментария в строке (если есть)
-        if let Some(comment_pos) = line.find("//") {
-            // Разбиваем строку на часть до комментария и сам комментарий
-            let code_part = &line[..comment_pos];
-            let comment_part = &line[comment_pos..];
-
-            // Обрабатываем только часть до комментария
-            let mut procedded_code = code_part.to_string();
-
-            for (wrong_any_case, correct) in corrections.iter() {
-                let pattern = format!(r"(?i)\b{}\b", regex::escape(wrong_any_case));
-                let re = Regex::new(&pattern).unwrap();
-                procedded_code = re.replace_all(&procedded_code, *correct).to_string();
-            }
-
-            // Собираем обатно строку с комментарием
-            processed_lines.push(format!("{}{}", procedded_code, comment_part));
-        } else {
-            // Нет комментариев - обрабатываем всю строку
-            let mut processed_line = line.to_string();
-            for (wrong_any_case, correct) in corrections.iter() {
-                let pattern = format!(r"(?i)\b{}\b", regex::escape(wrong_any_case));
-                let re = Regex::new(&pattern).unwrap();
-                processed_line = re.replace_all(&processed_line, *correct).to_string();
-            }
-            processed_lines.push(processed_line);
-        }
+fn process_line(line: &str, corrections: &[(&str, &str)]) -> String {
+    if let Some(comment_post) = line.find("//") {
+        let (code, comment) = line.split_at(comment_post);
+        format!("{}{}", process_code(code, corrections), comment)
+    } else {
+        process_code(line, corrections)
     }
 
-    let result = processed_lines.join("\n");
+}
 
-    clipboard.set_text(result).unwrap();
+fn process_code(code: &str, corrections: &[(&str, &str)]) -> String {
+    let mut result = code.to_string();
+    for (wrong, correct) in corrections {
+        let pattern = format!(r"(?i)\b{}\b", regex::escape(wrong));
+        let re = Regex::new(&pattern).unwrap();
+        result = re.replace_all(&result, *correct).to_string();
+    }
+    result 
+}
 
+fn process_text(text: &str, corrections: &[(&str, &str)]) -> String {
+    text.lines()
+        .map(|line| process_line(line, corrections))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
