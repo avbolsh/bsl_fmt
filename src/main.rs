@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use arboard::Clipboard;
 use regex::Regex;
 
