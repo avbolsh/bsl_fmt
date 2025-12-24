@@ -2,6 +2,7 @@ use arboard::Clipboard;
 use regex::Regex;
 
 fn main() {
+
     let mut clipboard = Clipboard::new().unwrap();
 
     let text_before = clipboard.get_text().unwrap();
@@ -69,14 +70,41 @@ fn main() {
         ("наклиентенасервере", "НаКлиентеНаСервере"),
     ];
 
-    let mut result = text_before.to_string();
+    // Разбиваем текст на строки, обрабатываем каждую строку отдельно
+    let lines: Vec<&str> = text_before.lines().collect();
+    let mut processed_lines = Vec::with_capacity(lines.len());
 
-    for (wrong_any_case, correct) in corrections.iter() {
-        let pattern = format!(r"(?i)\b{}\b", regex::escape(wrong_any_case));
-        let re = Regex::new(&pattern).unwrap();
+    for line in lines {
+        // Находим позицию комментария в строке (если есть)
+        if let Some(comment_pos) = line.find("//") {
+            // Разбиваем строку на часть до комментария и сам комментарий
+            let code_part = &line[..comment_pos];
+            let comment_part = &line[comment_pos..];
 
-        result = re.replace_all(&result, *correct).to_string();
+            // Обрабатываем только часть до комментария
+            let mut procedded_code = code_part.to_string();
+
+            for (wrong_any_case, correct) in corrections.iter() {
+                let pattern = format!(r"(?i)\b{}\b", regex::escape(wrong_any_case));
+                let re = Regex::new(&pattern).unwrap();
+                procedded_code = re.replace_all(&procedded_code, *correct).to_string();
+            }
+
+            // Собираем обатно строку с комментарием
+            processed_lines.push(format!("{}{}", procedded_code, comment_part));
+        } else {
+            // Нет комментариев - обрабатываем всю строку
+            let mut processed_line = line.to_string();
+            for (wrong_any_case, correct) in corrections.iter() {
+                let pattern = format!(r"(?i)\b{}\b", regex::escape(wrong_any_case));
+                let re = Regex::new(&pattern).unwrap();
+                processed_line = re.replace_all(&processed_line, *correct).to_string();
+            }
+            processed_lines.push(processed_line);
+        }
     }
+
+    let result = processed_lines.join("\n");
 
     clipboard.set_text(result).unwrap();
 
