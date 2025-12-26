@@ -13,6 +13,8 @@ fn main() {
 
     let result = process_text(&text, &corrections);
 
+    let result = remove_excess_blank_lines(&result);
+
     clipboard.set_text(result).unwrap();
 }
 
@@ -106,6 +108,37 @@ fn process_text(text: &str, corrections: &[(&str, &str)]) -> String {
         .map(|line| process_line(line, corrections))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn remove_excess_blank_lines(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut result_lines: Vec<&str> = Vec::new();
+    let mut i = 0;
+
+    while i < lines.len() {
+
+        let current_line = lines[i];
+
+        if current_line.trim().is_empty() {
+            if let Some(next_line) = lines.get(i + 1) {
+                if next_line.contains("КонецФункции") ||
+                    next_line.contains("КонецПроцедуры") ||
+                    next_line.contains("КонецЕсли") ||
+                    next_line.contains("КонецЦикла") {
+
+                        while !result_lines.is_empty() && result_lines.last().unwrap().trim().is_empty() {
+                            result_lines.pop();
+                        }
+                    }
+            }
+        }
+
+        result_lines.push(current_line);
+        i += 1;
+
+    }
+
+    result_lines.join("\n")
 }
 
 #[cfg(test)]
